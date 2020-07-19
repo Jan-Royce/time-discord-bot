@@ -15,6 +15,10 @@ const emojis = [
 
 const angryEmojis = ["😠","😡","🤬"];
 
+//commands
+const COMMAND_START = ['start', 's', 'begin', 'b'];
+const COMMAND_END = ['end', 'e', 'stop', 'sp'];
+
 var timeRecord = {};
 
 bot.on("ready", () => {
@@ -25,15 +29,19 @@ bot.on("error", (err)=>{console.log(err)});
 
 bot.on("messageCreate", (msg) => {
   if(msg.author.id == botId) return;
-  if(msg.channel.id != DISCORD_CHANNEL && (msg.content.includes('start') || msg.content.includes('end'))) {
+
+  let content = msg.content.split(' ');
+  let cmd = content[0].toLowerCase();
+
+  if(msg.channel.id != DISCORD_CHANNEL && (COMMAND_START.includes(cmd) || COMMAND_END.includes(cmd))) {
     bot.createMessage(msg.channel.id, `<@${msg.author.id}>, please use the <#${DISCORD_CHANNEL}> channel.`);
     botAddMultipleReacts(msg.id, msg.channel.id, angryEmojis);
     return;
   }
 
-  if(msg.content.includes('start')) {
+  if(COMMAND_START.includes(cmd)) {
       bot.createMessage(msg.channel.id, startTime(msg.author.username, msg.content, msg.id));
-  } else if(msg.content.includes('end')) {
+  } else if(COMMAND_END.includes(cmd)) {
       bot.createMessage(msg.channel.id, endTime(msg.author.username, msg.id));
   }
 });
@@ -54,10 +62,6 @@ function startTime(name, cmd, msgId) {
     return `\`\`\`css\nTimer already running for ${name} started @ ${displayLocalTime(name,timeRecord[name]['start'])}${msg}. Use 'end' command to end current timer.\`\`\``;
   }
 }
-
-// console.log(startTime('Royce', 'start -m "message goes here"'))
-// console.log(timeRecord['Royce']);
-// console.log(endTime('Royce'))
 
 function checkParams(name, cmd) {
   let paramObj = {};
