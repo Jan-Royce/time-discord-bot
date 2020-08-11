@@ -59,6 +59,14 @@ function startTime(name, cmd, msgId) {
   } else {
     botAddMultipleReacts(msgId, DISCORD_CHANNEL, angryEmojis);
     let msg = timeRecord[name]['msg'] != undefined ? " with message:'" + timeRecord[name]['msg'] + "'" : '';
+
+    let content = {
+        tts: true,
+        content : `Timer already running for you, ${name}`
+    };
+
+    bot.createMessage(DISCORD_CHANNEL, content);
+
     return `\`\`\`css\nTimer already running for ${name} started @ ${displayLocalTime(name,timeRecord[name]['start'])}${msg}. Use 'end' command to end current timer.\`\`\``;
   }
 }
