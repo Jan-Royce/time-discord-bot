@@ -89,7 +89,7 @@ function checkParams(name, cmd) {
 }
 
 function getMessage(cmd) {
-  let exp = /(?<=\-m\s\")[\w,\s]+(?=\")/g;
+  let exp = /(?<=\-m\s\").*(?=\")/g;
   return cmd.match(exp);
 }
 
