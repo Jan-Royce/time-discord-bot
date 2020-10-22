@@ -52,10 +52,23 @@ function startTime(name, cmd, msgId) {
   }
   if(!isTimeStarted(name)) {
     botAddReactsToStart(msgId);
-    timeRecord[name]['start'] = new Date();
     let params = checkParams(name, cmd);
+    if(typeof params['offset'] == 'string') {
+        let content = {
+            tts: true,
+            content : `Invalid offset parameter. Timer NOT started, ${name}`
+        };
+        bot.createMessage(DISCORD_CHANNEL, content);
+
+        return `\`\`\`css\nInvalid offset parameter: '${params['offset']}'. Timer NOT started.\`\`\``;
+    }
+    timeRecord[name]['start'] = new Date();
     let msg = params['msg'] != undefined ? " with message:'" + params['msg'] + "'" : '';
-    return `\`\`\`css\nTimer started for ${name} @ ${displayLocalTime(name,timeRecord[name]['start'])}${msg}. Use 'end' command to end current timer.\`\`\``;
+    let offset = '';
+    if(typeof params['offset'] == 'number') {
+        offset = ' with offset: ' + params['offset'];
+    }
+    return `\`\`\`css\nTimer started for ${name} @ ${displayLocalTime(name,timeRecord[name]['start'])}${msg}${offset}. Use 'end' command to end current timer.\`\`\``;
   } else {
     botAddMultipleReacts(msgId, DISCORD_CHANNEL, angryEmojis);
     let msg = timeRecord[name]['msg'] != undefined ? " with message:'" + timeRecord[name]['msg'] + "'" : '';
@@ -75,29 +88,48 @@ function checkParams(name, cmd) {
   let paramObj = {};
   //msg param
   timeRecord[name]['msg'] = "";
+  timeRecord[name]['offset'] = null;
   let cmdSplit = cmd.split(' ');
   if(cmdSplit.includes('-m')) {
     let msgParamIndex = cmdSplit.indexOf('-m') + 1;
-    if(cmdSplit[msgParamIndex] && getMessage(cmd)) {
-      timeRecord[name]['msg'] = getMessage(cmd);
-      paramObj['msg'] = getMessage(cmd);
+    let msg = getMessage(cmd);
+    if(cmdSplit[msgParamIndex] && msg) {
+      timeRecord[name]['msg'] = msg;
+      paramObj['msg'] = msg;
     }
   }
-  //add time param
+  if(cmdSplit.includes('-o')) {
+      let offsetParamIndex = cmdSplit.indexOf('-o') + 1;
+      let offset = getOffset(cmd);
+      if(cmdSplit[offsetParamIndex] && offset) {
+        timeRecord[name]['offset'] = offset;
+        paramObj['offset'] = offset;
+      }
+  }
 
   return paramObj;
 }
 
 function getMessage(cmd) {
-  let exp = /(?<=\-m\s\").*(?=\")/g;
+  let exp = /(?<=\-m\s\").*?(?=\")/g;
   return cmd.match(exp);
+}
+
+function getOffset(cmd) {
+  let exp = /(?<=\-o\s\").*?(?=\")/g;
+  let offsetExp = /\-?\d+(\.\d+)?/g
+  let offsetString = cmd.match(exp);
+  if(!offsetString) return offsetString;
+  if(offsetString[0].replace(offsetExp, '') === '') return parseFloat(offsetString);
+  return offsetString[0];
 }
 
 function endTime(name, msgId) {
   if(isTimeStarted(name)) {
     let end = new Date();
     let start = timeRecord[name]['start'];
-    let time = getRenderedTime(start, end);
+    let offset = timeRecord[name]['offset'];
+    let time = getRenderedTime(start, end, offset);
     let msg = renderMessage(name);
     bot.addMessageReaction(DISCORD_CHANNEL, msgId, "🛑");
     timeRecord[name]['start'] = '';
@@ -116,8 +148,14 @@ function displayLocalTime(name, time) {
   return time.toLocaleString("en-US",{timeZone: tz});
 }
 
-function getRenderedTime(start, end) {
-  let diff = end - start;
+function getRenderedTime(start, end, offset) {
+  let endTime = new Date(end);
+  let offsetMsg = '';
+  if(typeof offset == 'number') {
+      endTime.setTime(endTime.getTime() + (offset*60*60*1000));
+      offsetMsg = `Offset: **${offset}**\n`;
+  }
+  let diff = endTime - start;
   diff /= (1000*60*60);
   let hr = Math.floor(diff);
   let min = Math.round((diff % 1)*60);
@@ -139,7 +177,7 @@ function getRenderedTime(start, end) {
   let time = hr + decimal;
 
 
-  return `Computed: **${hr}H ${min}m** => **${time}**`;
+  return `${offsetMsg}Computed: **${hr}H ${min}m** => **${time}**`;
 }
 
 function renderMessage(name) {
